@@ -1,0 +1,15 @@
+# Arquivos compilados do Java
+*.class
+
+# Arquivos de Log
+*.log
+
+# Arquivos de IDE (Eclipse)
+.project
+.classpath
+.settings/
+bin/
+
+# Arquivos de SO (Windows, macOS)
+Thumbs.db
+.DS_Store
