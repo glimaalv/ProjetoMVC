@@ -1,107 +1,76 @@
 package view;
 
-// (Todos os imports que já tínhamos...)
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.JTabbedPane;
-import javax.swing.JLabel; 
-import javax.swing.JTextField; 
-import javax.swing.JFormattedTextField; 
-import javax.swing.text.MaskFormatter; 
-import javax.swing.SwingUtilities;
-import javax.swing.JComboBox; 
-import javax.swing.JRadioButton; 
-import javax.swing.ButtonGroup; 
-import javax.swing.BorderFactory; 
-import javax.swing.JMenuBar; 
-import javax.swing.JMenu; 
-import javax.swing.JMenuItem; 
-import javax.swing.KeyStroke; 
-import javax.swing.JSpinner; 
-import javax.swing.SpinnerNumberModel; 
-import javax.swing.border.Border; 
-import java.awt.Color; 
 import java.awt.BorderLayout;
-import java.awt.event.ActionListener; 
-import java.awt.event.ActionEvent; 
-import java.awt.event.KeyAdapter; 
-import java.awt.event.KeyEvent; 
-import javax.swing.JOptionPane; 
-import java.text.SimpleDateFormat; 
-import java.text.ParseException; 
-import java.sql.Date; 
-import javax.swing.JTable; 
-import javax.swing.JScrollPane; 
-import javax.swing.table.DefaultTableModel; 
-import java.util.List; 
-import javax.swing.ListSelectionModel;
-import javax.swing.event.ListSelectionListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.io.File;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.List;
+
+import javax.swing.ButtonGroup;
+import javax.swing.DefaultListModel;
+import javax.swing.JComboBox;
+import javax.swing.JFileChooser;
+import javax.swing.DefaultComboBoxModel;
+// (Todos os seus imports javax.swing, java.awt, etc. devem estar aqui)
+import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JTabbedPane;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableModel;
+
+// Imports do PDFBox
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 
 // Nossas classes de back-end
-import dao.AlunoDAO; 
-import dao.NotasFaltasDAO; 
-import model.Aluno; 
-import model.NotasFaltas; 
+import dao.AlunoDAO;
+import dao.CampusDAO;
+import dao.CursoDAO;
+import dao.DisciplinaDAO;
+import dao.NotasFaltasDAO;
+import model.Aluno;
+import model.NotasFaltas;
+import dao.DisciplinaDTO;
 
-import java.awt.event.InputEvent; 
 
 public class TelaPrincipal extends JFrame {
+    
+    private static final long serialVersionUID = 1L; // <-- ID de Versão Adicionado
 
-    // (Todos os atributos da classe... permanecem os mesmos)
     // --- Atributos da Tela ---
     private JTabbedPane abas;
     
-    private JPanel painelDadosPessoais;
-    private JPanel painelCurso;
-    private JPanel painelNotasFaltas;
-    private JPanel painelBoletim;
+    // --- Nossos 5 Painéis Personalizados ---
+    private PainelDadosPessoais painelDadosPessoais;
+    private PainelLancarNotas painelLancarNotas;
+    private PainelBoletim painelBoletim;
+    private PainelCadastroSistema painelCadastroSistema;
+    private PainelConsultaAlunos painelConsultaAlunos; 
     
-    // --- Atributos dos Componentes da Aba 1 ---
-    private JTextField txtRgm;
-    private JTextField txtNome;
-    private JFormattedTextField txtDataNasc;
-    private JFormattedTextField txtCpf;
-    private JTextField txtEmail;
-    private JTextField txtEndereco;
-    private JTextField txtMunicipio;
-    private JTextField txtUf;
-    private JFormattedTextField txtCelular;
-    
-    // --- Atributos dos Componentes da Aba 2 ---
-    private JComboBox<String> comboCurso;
-    private JComboBox<String> comboCampus;
-    private JRadioButton radioMatutino;
-    private JRadioButton radioVespertino;
-    private JRadioButton radioNoturno;
-    private ButtonGroup grupoPeriodo; 
-    
-    // --- Atributos dos Componentes da Aba 3 ---
-    private JTextField txtRgmNotas;
-    private JLabel lblNomeAlunoNotas;
-    private JLabel lblCursoAlunoNotas;
-    private JComboBox<String> comboDisciplina;
-    private JComboBox<String> comboSemestre;
-    private JSpinner spinnerNota;
-    private JSpinner spinnerFaltas;
-    
-    // --- Atributos dos Componentes da Aba 4 (Boletim) ---
-    private JLabel lblBoletimRgm;
-    private JLabel lblBoletimNome;
-    private JLabel lblBoletimCurso;
-    private JTable tabelaNotas;
-    private DefaultTableModel tableModel; 
-    
-    // --- Atributos dos Itens de Menu ---
-    private JMenuItem itemSalvarAluno;
-    private JMenuItem itemAlterarAluno;
-    private JMenuItem itemConsultarAluno;
-    private JMenuItem itemExcluirAluno;
+    // --- DAOs (Acesso ao Banco) ---
+    private AlunoDAO alunoDAO;
+    private NotasFaltasDAO notasFaltasDAO;
+    private CursoDAO cursoDAO;
+    private CampusDAO campusDAO;
+    private DisciplinaDAO disciplinaDAO;
+
+    // --- Atributos dos Itens de Menu (Restantes) ---
     private JMenuItem itemSair;
-    private JMenuItem itemSalvarNotas;
-    private JMenuItem itemAlterarNotas;
-    private JMenuItem itemExcluirNotas;
-    private JMenuItem itemConsultarNotas;
     private JMenuItem itemSobre;
     
     // --- Variáveis de Estado ---
@@ -113,35 +82,46 @@ public class TelaPrincipal extends JFrame {
      * Construtor da tela.
      */
     public TelaPrincipal() {
-        // (Este método permanece o mesmo)
-        // --- 1. Configurações básicas da janela ---
+        // --- 1. Inicializa os DAOs ---
+        alunoDAO = new AlunoDAO();
+        notasFaltasDAO = new NotasFaltasDAO();
+        cursoDAO = new CursoDAO();
+        campusDAO = new CampusDAO();
+        disciplinaDAO = new DisciplinaDAO();
+        
+        // --- 2. Configurações básicas da janela ---
         setTitle("Projeto Cadastro de Aluno");
-        setSize(700, 500); 
+        setSize(800, 600); 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null); 
 
-        // --- 2. Adiciona a Barra de Menu ---
+        // --- 3. Adiciona a Barra de Menu ---
         setJMenuBar(criarBarraDeMenu()); 
 
-        // --- 3. Cria o componente de Abas ---
+        // --- 4. Cria o componente de Abas ---
         abas = new JTabbedPane();
 
-        // --- 4. Cria os painéis ---
-        painelDadosPessoais = criarPainelDadosPessoais(); 
-        painelCurso = criarPainelCurso(); 
-        painelNotasFaltas = criarPainelNotasFaltas(); 
-        painelBoletim = criarPainelBoletim(); 
+        // --- 5. Cria os painéis (agora instanciando nossas classes) ---
+        painelDadosPessoais = new PainelDadosPessoais(); 
+        painelLancarNotas = new PainelLancarNotas(); 
+        painelBoletim = new PainelBoletim(); 
+        painelCadastroSistema = new PainelCadastroSistema(); 
+        painelConsultaAlunos = new PainelConsultaAlunos(); 
         
-        // --- 5. Adiciona os painéis às abas ---
-        abas.addTab("Dados Pessoais", painelDadosPessoais);
-        abas.addTab("Curso", painelCurso);
-        abas.addTab("Notas e Faltas", painelNotasFaltas);
+        // --- 6. Adiciona os painéis às abas ---
+        abas.addTab("Dados Pessoais e Curso", painelDadosPessoais); 
+        abas.addTab("Lançar Notas/Faltas", painelLancarNotas);
         abas.addTab("Boletim", painelBoletim);
-
-        // --- 6. Adiciona as abas na janela ---
+        abas.addTab("Cadastro Sistema", painelCadastroSistema);
+        abas.addTab("Consulta Alunos", painelConsultaAlunos); 
+        
+        // --- 7. Adiciona as abas na janela ---
         add(abas, BorderLayout.CENTER);
         
-        // --- 7. Registra os "ouvintes" de eventos (cliques) ---
+        // --- 8. Carrega dados dinâmicos ---
+        carregarComboBoxesEListas(); 
+        
+        // --- 9. Registra os "ouvintes" de eventos (cliques) ---
         adicionarListeners();
     }
     
@@ -152,47 +132,13 @@ public class TelaPrincipal extends JFrame {
         // (Este método permanece o mesmo)
         JMenuBar menuBar = new JMenuBar();
         
-        // --- Menu Aluno ---
-        JMenu menuAluno = new JMenu("Aluno");
-        menuBar.add(menuAluno);
+        JMenu menuSair = new JMenu("Sair"); 
+        menuBar.add(menuSair);
         
-        itemSalvarAluno = new JMenuItem("Salvar");
-        itemSalvarAluno.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK));
-        menuAluno.add(itemSalvarAluno);
-        
-        itemAlterarAluno = new JMenuItem("Alterar");
-        menuAluno.add(itemAlterarAluno);
-        
-        itemConsultarAluno = new JMenuItem("Consultar");
-        menuAluno.add(itemConsultarAluno);
-        
-        itemExcluirAluno = new JMenuItem("Excluir");
-        menuAluno.add(itemExcluirAluno);
-        
-        menuAluno.addSeparator();
-        
-        itemSair = new JMenuItem("Sair");
+        itemSair = new JMenuItem("Sair do Sistema"); 
         itemSair.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.SHIFT_DOWN_MASK));
-        menuAluno.add(itemSair);
+        menuSair.add(itemSair); 
 
-        // --- Menu Notas e Faltas ---
-        JMenu menuNotas = new JMenu("Notas e Faltas");
-        menuBar.add(menuNotas);
-        
-        itemSalvarNotas = new JMenuItem("Salvar");
-        menuNotas.add(itemSalvarNotas);
-        
-        itemAlterarNotas = new JMenuItem("Alterar");
-        itemAlterarNotas.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, InputEvent.CTRL_DOWN_MASK));
-        menuNotas.add(itemAlterarNotas);
-
-        itemExcluirNotas = new JMenuItem("Excluir");
-        menuNotas.add(itemExcluirNotas);
-        
-        itemConsultarNotas = new JMenuItem("Consultar");
-        menuNotas.add(itemConsultarNotas);
-
-        // --- Menu Ajuda ---
         JMenu menuAjuda = new JMenu("Ajuda");
         menuBar.add(menuAjuda);
         
@@ -203,425 +149,98 @@ public class TelaPrincipal extends JFrame {
     }
 
     
-    /**
-     * Cria o painel com os campos de Dados Pessoais.
-     */
-    private JPanel criarPainelDadosPessoais() {
-        // (Este método permanece o mesmo)
-        JPanel painel = new JPanel();
-        painel.setLayout(null); 
-        
-        // --- Campo RGM ---
-        JLabel lblRgm = new JLabel("RGM:");
-        lblRgm.setBounds(20, 30, 80, 25);
-        painel.add(lblRgm);
-        
-        txtRgm = new JTextField();
-        txtRgm.setBounds(100, 30, 120, 25);
-        painel.add(txtRgm);
-        
-        // (Resto dos campos... Nome, Data, CPF, etc...)
-        // --- Campo Nome ---
-        JLabel lblNome = new JLabel("Nome:");
-        lblNome.setBounds(240, 30, 80, 25);
-        painel.add(lblNome);
-        
-        txtNome = new JTextField();
-        txtNome.setBounds(290, 30, 350, 25);
-        painel.add(txtNome);
-        
-        // --- Campo Data de Nascimento ---
-        JLabel lblDataNasc = new JLabel("Data de Nasc.:");
-        lblDataNasc.setBounds(20, 70, 80, 25);
-        painel.add(lblDataNasc);
-        
-        // --- Campo CPF ---
-        JLabel lblCpf = new JLabel("CPF:");
-        lblCpf.setBounds(240, 70, 80, 25);
-        painel.add(lblCpf);
-        
-        // --- Campo Email ---
-        JLabel lblEmail = new JLabel("Email:");
-        lblEmail.setBounds(20, 110, 80, 25);
-        painel.add(lblEmail);
-        
-        txtEmail = new JTextField();
-        txtEmail.setBounds(100, 110, 540, 25);
-        painel.add(txtEmail);
-        
-        // --- Campo Endereço ---
-        JLabel lblEnd = new JLabel("Endereço:");
-        lblEnd.setBounds(20, 150, 80, 25);
-        painel.add(lblEnd);
-        
-        txtEndereco = new JTextField();
-        txtEndereco.setBounds(100, 150, 540, 25);
-        painel.add(txtEndereco);
-        
-        // --- Campo Município ---
-        JLabel lblMunicipio = new JLabel("Município:");
-        lblMunicipio.setBounds(20, 190, 80, 25);
-        painel.add(lblMunicipio);
-        
-        txtMunicipio = new JTextField();
-        txtMunicipio.setBounds(100, 190, 200, 25);
-        painel.add(txtMunicipio);
-        
-        // --- Campo UF ---
-        JLabel lblUf = new JLabel("UF:");
-        lblUf.setBounds(320, 190, 30, 25);
-        painel.add(lblUf);
-        
-        txtUf = new JTextField();
-        txtUf.setBounds(350, 190, 50, 25);
-        painel.add(txtUf);
-        
-        // --- Campo Celular ---
-        JLabel lblCelular = new JLabel("Celular:");
-        lblCelular.setBounds(420, 190, 80, 25);
-        painel.add(lblCelular);
-
-        // --- Tratamento das Máscaras ---
-        try {
-            MaskFormatter mascaraData = new MaskFormatter("##/##/####");
-            mascaraData.setPlaceholderCharacter('_');
-            txtDataNasc = new JFormattedTextField(mascaraData);
-            txtDataNasc.setBounds(100, 70, 120, 25);
-            painel.add(txtDataNasc);
-            
-            MaskFormatter mascaraCpf = new MaskFormatter("###.###.###-##");
-            mascaraCpf.setPlaceholderCharacter('_');
-            txtCpf = new JFormattedTextField(mascaraCpf);
-            txtCpf.setBounds(290, 70, 150, 25);
-            painel.add(txtCpf);
-            
-            MaskFormatter mascaraCel = new MaskFormatter("(##) #####-####");
-            mascaraCel.setPlaceholderCharacter('_');
-            txtCelular = new JFormattedTextField(mascaraCel);
-            txtCelular.setBounds(480, 190, 160, 25);
-            painel.add(txtCelular);
-            
-        } catch (ParseException e) {
-            System.err.println("Erro ao criar máscaras: " + e.getMessage());
-        }
-        
-        return painel;
-    }
-    
-    /**
-     * Cria o painel com os campos de Curso.
-     * (MÉTODO ATUALIZADO)
-     */
-    private JPanel criarPainelCurso() {
-        JPanel painel = new JPanel();
-        painel.setLayout(null); // Layout absoluto
-
-        // --- Campo Curso (JComboBox) ---
-        JLabel lblCurso = new JLabel("Curso:");
-        lblCurso.setBounds(20, 30, 80, 25);
-        painel.add(lblCurso);
-
-        // Opções de exemplo (pode alterar)
-        String[] cursos = { 
-            "Análise e Desenvolvimento de Sistemas", 
-            "Ciência da Computação", 
-            "Engenharia de Software", 
-            "Sistemas de Informação" 
-        };
-        comboCurso = new JComboBox<>(cursos);
-        comboCurso.setBounds(100, 30, 300, 25);
-        painel.add(comboCurso);
-
-        // --- Campo Campus (JComboBox) ---
-        JLabel lblCampus = new JLabel("Campus:");
-        lblCampus.setBounds(20, 70, 80, 25);
-        painel.add(lblCampus);
-
-        // ***** ALTERAÇÃO AQUI *****
-        // Opções de exemplo (pode alterar)
-        String[] campus = { 
-            "Tatuapé", 
-            "Pinheiros", 
-            "Santo Amaro", 
-            "Barra Funda",
-            "Guarulhos", // <-- Adicionado
-            "São Paulo"  // <-- Adicionado
-        };
-        comboCampus = new JComboBox<>(campus);
-        comboCampus.setBounds(100, 70, 300, 25);
-        painel.add(comboCampus);
-        // ***** FIM DA ALTERAÇÃO *****
-
-        // --- Campo Período (JRadioButton) ---
-        // Criamos um painel interno para agrupar os botões de rádio
-        JPanel painelPeriodo = new JPanel();
-        painelPeriodo.setBounds(20, 110, 400, 60);
-        // Cria uma borda com título
-        painelPeriodo.setBorder(BorderFactory.createTitledBorder("Período")); 
-        painel.add(painelPeriodo);
-
-        radioMatutino = new JRadioButton("Matutino");
-        radioVespertino = new JRadioButton("Vespertino");
-        radioNoturno = new JRadioButton("Noturno");
-        radioNoturno.setSelected(true); // Deixa "Noturno" pré-selecionado (como na imagem)
-
-        // Isso é o mais importante: agrupa os botões
-        // Garante que só um pode ser selecionado por vez
-        grupoPeriodo = new ButtonGroup();
-        grupoPeriodo.add(radioMatutino);
-        grupoPeriodo.add(radioVespertino);
-        grupoPeriodo.add(radioNoturno);
-
-        // Adiciona os botões ao painel interno
-        painelPeriodo.add(radioMatutino);
-        painelPeriodo.add(radioVespertino);
-        painelPeriodo.add(radioNoturno);
-
-        return painel;
-    }
-
-    
-    /**
-     * Cria o painel com os campos de Notas e Faltas.
-     */
-    private JPanel criarPainelNotasFaltas() {
-        // (Este método permanece o mesmo)
-        JPanel painel = new JPanel();
-        painel.setLayout(null); 
-        
-        // --- Campo RGM ---
-        JLabel lblRgmNotas = new JLabel("RGM:");
-        lblRgmNotas.setBounds(20, 30, 80, 25);
-        painel.add(lblRgmNotas);
-        
-        txtRgmNotas = new JTextField();
-        txtRgmNotas.setBounds(100, 30, 100, 25);
-        painel.add(txtRgmNotas);
-        
-        // --- "Display" Nome do Aluno ---
-        Border bordaDisplay = BorderFactory.createLineBorder(Color.LIGHT_GRAY);
-        
-        lblNomeAlunoNotas = new JLabel(" [Digite o RGM e aperte Enter]");
-        lblNomeAlunoNotas.setBounds(210, 30, 430, 25);
-        lblNomeAlunoNotas.setBorder(bordaDisplay);
-        painel.add(lblNomeAlunoNotas);
-        
-        // --- "Display" Curso do Aluno ---
-        lblCursoAlunoNotas = new JLabel(" [Aguardando aluno...]");
-        lblCursoAlunoNotas.setBounds(100, 70, 540, 25);
-        lblCursoAlunoNotas.setBorder(bordaDisplay);
-        painel.add(lblCursoAlunoNotas);
-        
-        // (Resto do painel... disciplinas, semestre, nota, faltas...)
-        // --- Campo Disciplina ---
-        JLabel lblDisciplina = new JLabel("Disciplina:");
-        lblDisciplina.setBounds(20, 110, 80, 25);
-        painel.add(lblDisciplina);
-        
-        String[] disciplinas = {
-            "Programação Orientada a Objetos",
-            "Banco de Dados",
-            "Engenharia de Software III",
-            "Programação Web",
-            "Sistemas Operacionais"
-        };
-        comboDisciplina = new JComboBox<>(disciplinas);
-        comboDisciplina.setBounds(100, 110, 300, 25);
-        painel.add(comboDisciplina);
-        
-        // --- Campo Semestre ---
-        JLabel lblSemestre = new JLabel("Semestre:");
-        lblSemestre.setBounds(20, 150, 80, 25);
-        painel.add(lblSemestre);
-        
-        String[] semestres = { "2020-1", "2020-2", "2021-1", "2021-2", "2022-1" };
-        comboSemestre = new JComboBox<>(semestres);
-        comboSemestre.setBounds(100, 150, 100, 25);
-        painel.add(comboSemestre);
-        
-        // --- Campo Nota ---
-        JLabel lblNota = new JLabel("Nota:");
-        lblNota.setBounds(220, 150, 40, 25);
-        painel.add(lblNota);
-        
-        SpinnerNumberModel modelNota = new SpinnerNumberModel(5.0, 0.0, 10.0, 0.5);
-        spinnerNota = new JSpinner(modelNota);
-        spinnerNota.setBounds(260, 150, 60, 25);
-        painel.add(spinnerNota);
-        
-        // --- Campo Faltas ---
-        JLabel lblFaltas = new JLabel("Faltas:");
-        lblFaltas.setBounds(340, 150, 50, 25);
-        painel.add(lblFaltas);
-        
-        SpinnerNumberModel modelFaltas = new SpinnerNumberModel(0, 0, 100, 1);
-        spinnerFaltas = new JSpinner(modelFaltas);
-        spinnerFaltas.setBounds(390, 150, 60, 25);
-        painel.add(spinnerFaltas);
-        
-        return painel;
-    }
-
-    /**
-     * Cria o painel da aba Boletim
-     */
-    private JPanel criarPainelBoletim() {
-        // (Este método permanece o mesmo)
-        JPanel painel = new JPanel();
-        painel.setLayout(null); 
-        
-        Border bordaDisplay = BorderFactory.createLineBorder(Color.LIGHT_GRAY);
-        
-        // (Rótulos e Displays para RGM, Nome, Curso...)
-        // --- Rótulos (fixos) ---
-        JLabel lblRgmLabel = new JLabel("RGM:");
-        lblRgmLabel.setBounds(20, 30, 80, 25);
-        painel.add(lblRgmLabel);
-        
-        JLabel lblNomeLabel = new JLabel("Nome:");
-        lblNomeLabel.setBounds(20, 70, 80, 25);
-        painel.add(lblNomeLabel);
-        
-        JLabel lblCursoLabel = new JLabel("Curso:");
-        lblCursoLabel.setBounds(20, 110, 80, 25);
-        painel.add(lblCursoLabel);
-
-        // --- Displays (onde os dados vão aparecer) ---
-        lblBoletimRgm = new JLabel();
-        lblBoletimRgm.setBounds(100, 30, 150, 25);
-        lblBoletimRgm.setBorder(bordaDisplay);
-        painel.add(lblBoletimRgm);
-        
-        lblBoletimNome = new JLabel();
-        lblBoletimNome.setBounds(100, 70, 540, 25);
-        lblBoletimNome.setBorder(bordaDisplay);
-        painel.add(lblBoletimNome);
-        
-        lblBoletimCurso = new JLabel();
-        lblBoletimCurso.setBounds(100, 110, 540, 25);
-        lblBoletimCurso.setBorder(bordaDisplay);
-        painel.add(lblBoletimCurso);
-        
-        // --- Tabela de Notas ---
-        
-        // 1. Define as colunas
-        String[] colunas = { "ID", "Semestre", "Disciplina", "Nota", "Faltas" };
-        
-        // 2. Cria o modelo da tabela
-        tableModel = new DefaultTableModel(colunas, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-        
-        // 3. Cria a tabela
-        tabelaNotas = new JTable(tableModel);
-        
-        // 4. Configuração da Tabela
-        tabelaNotas.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        
-        // 5. Coloca a tabela dentro de um JScrollPane
-        JScrollPane scrollPane = new JScrollPane(tabelaNotas);
-        scrollPane.setBounds(20, 150, 620, 250); 
-        painel.add(scrollPane);
-        
-        return painel;
-    }
-    
     // -----------------------------------------------------------------
     // --- MÉTODOS DE INTEGRAÇÃO ---
     // -----------------------------------------------------------------
 
     /**
      * Adiciona os listeners (ouvintes de ação) aos componentes
-     * (MÉTODO ATUALIZADO)
      */
     private void adicionarListeners() {
         
-        // --- Menu Aluno ---
-        itemSalvarAluno.addActionListener(e -> salvarAluno());
-        itemExcluirAluno.addActionListener(e -> excluirAluno());
-        itemConsultarAluno.addActionListener(e -> consultarAluno());
-        itemAlterarAluno.addActionListener(e -> alterarAluno());
+        // --- Aba 1 (Botões Aluno) ---
+        painelDadosPessoais.getBtnSalvarAluno().addActionListener(e -> salvarAluno());
+        painelDadosPessoais.getBtnExcluirAluno().addActionListener(e -> excluirAluno());
+        painelDadosPessoais.getBtnConsultarAluno().addActionListener(e -> consultarAluno());
+        painelDadosPessoais.getBtnAlterarAluno().addActionListener(e -> alterarAluno());
+        painelDadosPessoais.getBtnLimparCampos().addActionListener(e -> limparCamposAluno());
         
+        // --- Menu Sair ---
         itemSair.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Pergunta ao usuário se ele realmente quer sair
                 int resposta = JOptionPane.showConfirmDialog(
-                    TelaPrincipal.this, // "Pai" da janela
+                    TelaPrincipal.this, 
                     "Tem certeza que deseja fechar o sistema?",
                     "Confirmar Saída",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.QUESTION_MESSAGE
                 );
-                
-                // Se o usuário clicou "YES" (Sim)
                 if (resposta == JOptionPane.YES_OPTION) {
-                    System.exit(0); // Fecha a aplicação
+                    System.exit(0);
                 }
             }
         });
         
-        // --- Aba 3 (Notas e Faltas) ---
-        txtRgmNotas.addActionListener(e -> buscarAlunoParaNotas());
+        // --- Botão PDF ---
+        painelBoletim.getBtnGerarPDF().addActionListener(e -> gerarBoletimPDF());
         
-        // --- Menu Notas e Faltas ---
-        itemSalvarNotas.addActionListener(e -> salvarNotaFalta());
-        itemConsultarNotas.addActionListener(e -> consultarBoletim());
-        itemExcluirNotas.addActionListener(e -> excluirNotaFalta());
-        itemAlterarNotas.addActionListener(e -> alterarNotaFalta());
+        // --- Aba 2 (Lançar Notas) ---
+        painelLancarNotas.getTxtRgmNotas().addActionListener(e -> buscarAlunoParaNotas());
+        painelLancarNotas.getBtnSalvarNota().addActionListener(e -> salvarNotaFalta());
+        
+        // --- Aba 3 (Boletim) ---
+        painelBoletim.getBtnConsultarBoletim().addActionListener(e -> consultarBoletim());
+        painelBoletim.getBtnExcluirNota().addActionListener(e -> excluirNotaFalta());
+        painelBoletim.getBtnAlterarNota().addActionListener(e -> alterarNotaFalta());
 
-        // --- Menu Ajuda (ALTERADO) ---
+        // --- Menu Ajuda ---
         itemSobre.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // ***** ALTERAÇÃO AQUI *****
-                // Mostra uma janela de informação simples
                 JOptionPane.showMessageDialog(
                     TelaPrincipal.this, 
                     "Sistema de Cadastro de Aluno\n\n" +
                     "Desenvolvido por Gustavo Alves como projeto de POO na Fatec Guarulhos.\n" +
-                    "Tecnologias: Java Swing e MySQL.",
-                    "Sobre o Sistema", // Título da Janela
-                    JOptionPane.INFORMATION_MESSAGE // Ícone de informação
+                    "Tecnologias: Java Swing e SQLite.", // Atualizei para SQLite
+                    "Sobre o Sistema", 
+                    JOptionPane.INFORMATION_MESSAGE 
                 );
-                // ***** FIM DA ALTERAÇÃO *****
             }
         });
         
-        // --- Listener de Seleção da Tabela ---
-        tabelaNotas.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+        // --- Listener de Seleção da Tabela (Aba Boletim) ---
+        painelBoletim.getTabelaNotas().getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent event) {
-                if (!event.getValueIsAdjusting()) {
-                    int linhaSelecionada = tabelaNotas.getSelectedRow();
+                // (O erro de digitação foi corrigido aqui)
+                if (!event.getValueIsAdjusting()) { 
+                    int linhaSelecionada = painelBoletim.getTabelaNotas().getSelectedRow();
                     
                     if (linhaSelecionada != -1) {
-                        // --- LÓGICA DE ALTERAÇÃO (Início) ---
-                        // 1. Pega os dados da linha selecionada
+                        DefaultTableModel tableModel = painelBoletim.getTableModel();
+                        
                         idNotaSelecionada = (Integer) tableModel.getValueAt(linhaSelecionada, 0);
                         String semestre = (String) tableModel.getValueAt(linhaSelecionada, 1);
                         String disciplina = (String) tableModel.getValueAt(linhaSelecionada, 2);
                         Double nota = (Double) tableModel.getValueAt(linhaSelecionada, 3);
                         Integer faltas = (Integer) tableModel.getValueAt(linhaSelecionada, 4);
                         
-                        // 2. Preenche a aba "Notas e Faltas" com esses dados
-                        comboSemestre.setSelectedItem(semestre);
-                        comboDisciplina.setSelectedItem(disciplina);
-                        spinnerNota.setValue(nota);
-                        spinnerFaltas.setValue(faltas);
+                        // Preenche a aba "Lançar Notas"
+                        painelLancarNotas.getComboSemestre().setSelectedItem(semestre);
                         
-                        // 3. Preenche também os dados do aluno (RGM, Nome, Curso)
-                        //    na aba "Notas e Faltas"
-                        txtRgmNotas.setText(lblBoletimRgm.getText());
-                        lblNomeAlunoNotas.setText(lblBoletimNome.getText());
-                        lblCursoAlunoNotas.setText(lblBoletimCurso.getText());
-                        rgmAlunoAtual = lblBoletimRgm.getText();
+                        painelLancarNotas.getSpinnerNota().setValue(nota);
+                        painelLancarNotas.getSpinnerFaltas().setValue(faltas);
                         
-                        // 4. Muda para a aba de edição
-                        abas.setSelectedComponent(painelNotasFaltas);
+                        // Chama o buscarAluno para carregar o aluno e
+                        // (principalmente) carregar as disciplinas corretas no combo
+                        painelLancarNotas.getTxtRgmNotas().setText(painelBoletim.getLblBoletimRgm().getText());
+                        buscarAlunoParaNotas(); // Isso vai carregar o combo de disciplinas
+                        
+                        // Agora que o combo está carregado, nós selecionamos a disciplina
+                        painelLancarNotas.getComboDisciplina().setSelectedItem(disciplina);
+                        
+                        abas.setSelectedComponent(painelLancarNotas);
                         
                     } else {
                         idNotaSelecionada = -1;
@@ -629,19 +248,26 @@ public class TelaPrincipal extends JFrame {
                 }
             }
         });
+        
+        // --- Listeners da Aba "Cadastro Sistema" ---
+        painelCadastroSistema.getBtnSalvarCurso().addActionListener(e -> salvarNovoItem("curso"));
+        painelCadastroSistema.getBtnExcluirCurso().addActionListener(e -> excluirItemSelecionado("curso"));
+        painelCadastroSistema.getBtnSalvarCampus().addActionListener(e -> salvarNovoItem("campus"));
+        painelCadastroSistema.getBtnExcluirCampus().addActionListener(e -> excluirItemSelecionado("campus"));
+        painelCadastroSistema.getBtnSalvarDisciplina().addActionListener(e -> salvarNovoItem("disciplina"));
+        painelCadastroSistema.getBtnExcluirDisciplina().addActionListener(e -> excluirItemSelecionado("disciplina"));
+        
+        // --- Listener da Aba "Consulta Alunos" ---
+        painelConsultaAlunos.getBtnBuscar().addActionListener(e -> consultarAlunosPorFiltro());
     }
     
     // --- Métodos do CRUD Aluno ---
     
-    /**
-     * Método para salvar os dados do Aluno
-     */
     private void salvarAluno() {
-        // (Este método permanece o mesmo)
-        if (txtRgm.getText().trim().isEmpty()) {
+        if (painelDadosPessoais.getTxtRgm().getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "O campo RGM não pode estar vazio.", "Erro de Validação", JOptionPane.ERROR_MESSAGE);
             abas.setSelectedComponent(painelDadosPessoais);
-            txtRgm.requestFocus(); 
+            painelDadosPessoais.getTxtRgm().requestFocus(); 
             return;
         }
 
@@ -651,25 +277,41 @@ public class TelaPrincipal extends JFrame {
         } catch (ParseException e) {
             JOptionPane.showMessageDialog(this, "Formato de data inválido. Use dd/MM/yyyy.", "Erro de Formato", JOptionPane.ERROR_MESSAGE);
             abas.setSelectedComponent(painelDadosPessoais);
-            txtDataNasc.requestFocus();
+            painelDadosPessoais.getTxtDataNasc().requestFocus();
             return;
         }
 
         try {
-            AlunoDAO dao = new AlunoDAO();
-            dao.salvar(aluno); 
+            alunoDAO.salvar(aluno); 
             JOptionPane.showMessageDialog(this, "Aluno salvo com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            limparCamposAluno();
+            
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Erro ao salvar aluno no banco de dados:\n" + e.getMessage(), "Erro de Banco de Dados", JOptionPane.ERROR_MESSAGE);
+            String mensagemErro = e.getMessage();
+            
+            if (mensagemErro != null && mensagemErro.contains("SQLITE_CONSTRAINT_PRIMARYKEY")) {
+                JOptionPane.showMessageDialog(this, 
+                    "Erro ao Salvar: O RGM '" + aluno.getRgm() + "' já está cadastrado no sistema.", 
+                    "RGM Duplicado", 
+                    JOptionPane.ERROR_MESSAGE);
+                
+            } else if (mensagemErro != null && mensagemErro.contains("SQLITE_CONSTRAINT_UNIQUE")) {
+                 JOptionPane.showMessageDialog(this, 
+                    "Erro ao Salvar: O CPF '" + aluno.getCpf() + "' já está cadastrado para outro aluno.", 
+                    "CPF Duplicado", 
+                    JOptionPane.ERROR_MESSAGE);
+
+            } else {
+                JOptionPane.showMessageDialog(this, 
+                    "Erro ao salvar aluno no banco de dados:\n" + mensagemErro, 
+                    "Erro de Banco de Dados", 
+                    JOptionPane.ERROR_MESSAGE);
+            }
             e.printStackTrace(); 
         }
     }
     
-    /**
-     * Método para excluir um Aluno
-     */
     private void excluirAluno() {
-        // (Este método permanece o mesmo)
         String rgm = JOptionPane.showInputDialog(this, "Digite o RGM do aluno que deseja excluir:", "Excluir Aluno", JOptionPane.QUESTION_MESSAGE);
         
         if (rgm == null || rgm.trim().isEmpty()) {
@@ -684,20 +326,20 @@ public class TelaPrincipal extends JFrame {
         }
 
         try {
-            AlunoDAO dao = new AlunoDAO();
-            dao.excluir(rgm.trim());
+            alunoDAO.excluir(rgm.trim());
             JOptionPane.showMessageDialog(this, "Aluno excluído com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            
+            if (painelDadosPessoais.getTxtRgm().getText().equals(rgm.trim())) {
+                limparCamposAluno();
+            }
+            
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Erro ao excluir aluno:\n" + e.getMessage(), "Erro de Banco de Dados", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
     }
     
-    /**
-     * Método para consultar um Aluno
-     */
     private void consultarAluno() {
-        // (Este método permanece o mesmo)
         String rgm = JOptionPane.showInputDialog(this, "Digite o RGM do aluno que deseja consultar:", "Consultar Aluno", JOptionPane.QUESTION_MESSAGE);
 
         if (rgm == null || rgm.trim().isEmpty()) {
@@ -705,8 +347,7 @@ public class TelaPrincipal extends JFrame {
         }
 
         try {
-            AlunoDAO dao = new AlunoDAO();
-            Aluno aluno = dao.consultar(rgm.trim()); 
+            Aluno aluno = alunoDAO.consultar(rgm.trim()); 
 
             if (aluno != null) {
                 preencherCampos(aluno);
@@ -714,6 +355,7 @@ public class TelaPrincipal extends JFrame {
                 abas.setSelectedComponent(painelDadosPessoais); 
             } else {
                 JOptionPane.showMessageDialog(this, "Aluno com RGM " + rgm + " não encontrado.", "Erro", JOptionPane.ERROR_MESSAGE);
+                limparCamposAluno(); 
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Erro ao consultar aluno:\n" + e.getMessage(), "Erro de Banco de Dados", JOptionPane.ERROR_MESSAGE);
@@ -721,18 +363,14 @@ public class TelaPrincipal extends JFrame {
         }
     }
     
-    /**
-     * Método para alterar os dados do Aluno
-     */
     private void alterarAluno() {
-        // (Este método permanece o mesmo)
-        if (txtRgm.getText().trim().isEmpty()) {
+        if (painelDadosPessoais.getTxtRgm().getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "RGM não preenchido. Consulte um aluno antes de alterar.", "Erro de Validação", JOptionPane.ERROR_MESSAGE);
             abas.setSelectedComponent(painelDadosPessoais);
             return;
         }
         
-        int resposta = JOptionPane.showConfirmDialog(this, "Tem certeza que deseja salvar as alterações para o aluno RGM " + txtRgm.getText() + "?", "Confirmação de Alteração", JOptionPane.YES_NO_OPTION);
+        int resposta = JOptionPane.showConfirmDialog(this, "Tem certeza que deseja salvar as alterações para o aluno RGM " + painelDadosPessoais.getTxtRgm().getText() + "?", "Confirmação de Alteração", JOptionPane.YES_NO_OPTION);
         
         if (resposta != JOptionPane.YES_OPTION) {
             return; 
@@ -744,16 +382,23 @@ public class TelaPrincipal extends JFrame {
         } catch (ParseException e) {
             JOptionPane.showMessageDialog(this, "Formato de data inválido. Use dd/MM/yyyy.", "Erro de Formato", JOptionPane.ERROR_MESSAGE);
             abas.setSelectedComponent(painelDadosPessoais);
-            txtDataNasc.requestFocus();
+            painelDadosPessoais.getTxtDataNasc().requestFocus();
             return;
         }
         
         try {
-            AlunoDAO dao = new AlunoDAO();
-            dao.alterar(aluno); 
+            alunoDAO.alterar(aluno); 
             JOptionPane.showMessageDialog(this, "Aluno alterado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Erro ao alterar aluno:\n" + e.getMessage(), "Erro de Banco de Dados", JOptionPane.ERROR_MESSAGE);
+            String mensagemErro = e.getMessage();
+            if (mensagemErro != null && mensagemErro.contains("SQLITE_CONSTRAINT_UNIQUE")) {
+                 JOptionPane.showMessageDialog(this, 
+                    "Erro ao Alterar: O CPF '" + aluno.getCpf() + "' já está cadastrado para outro aluno.", 
+                    "CPF Duplicado", 
+                    JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Erro ao alterar aluno:\n" + e.getMessage(), "Erro de Banco de Dados", JOptionPane.ERROR_MESSAGE);
+            }
             e.printStackTrace();
         }
     }
@@ -762,31 +407,53 @@ public class TelaPrincipal extends JFrame {
     // --- Métodos do CRUD Notas e Faltas ---
     
     /**
-     * Busca os dados de um aluno (Nome e Curso) na aba "Notas e Faltas".
+     * (MÉTODO ATUALIZADO)
+     * Busca os dados de um aluno E FILTRA as disciplinas dele.
      */
     private void buscarAlunoParaNotas() {
-        // (Este método permanece o mesmo)
-        String rgm = txtRgmNotas.getText().trim();
+        String rgm = painelLancarNotas.getTxtRgmNotas().getText().trim();
         if (rgm.isEmpty()) {
-            lblNomeAlunoNotas.setText(" [Digite um RGM e aperte Enter]");
-            lblCursoAlunoNotas.setText(" [Aguardando aluno...]");
+            painelLancarNotas.getLblNomeAlunoNotas().setText(" [Digite um RGM e aperte Enter]");
+            painelLancarNotas.getLblCursoAlunoNotas().setText(" [Aguardando aluno...]");
             this.rgmAlunoAtual = null; 
+            painelLancarNotas.getComboDisciplina().removeAllItems(); // Limpa o combo
             return;
         }
 
         try {
-            AlunoDAO dao = new AlunoDAO();
-            Aluno aluno = dao.consultar(rgm);
+            Aluno aluno = alunoDAO.consultar(rgm);
 
             if (aluno != null) {
-                lblNomeAlunoNotas.setText(aluno.getNome());
-                lblCursoAlunoNotas.setText(aluno.getCurso());
+                // 1. Preenche os dados do aluno
+                painelLancarNotas.getLblNomeAlunoNotas().setText(aluno.getNome());
+                painelLancarNotas.getLblCursoAlunoNotas().setText(aluno.getCurso());
                 this.rgmAlunoAtual = aluno.getRgm(); 
-                comboDisciplina.requestFocus();
+                
+                // --- 2. (NOVO) Carrega as disciplinas SÓ DESSE CURSO ---
+                JComboBox<String> comboDisciplina = painelLancarNotas.getComboDisciplina();
+                comboDisciplina.removeAllItems(); // Limpa as disciplinas antigas
+                
+                if (aluno.getCurso() != null) {
+                    List<String> disciplinasDoCurso = disciplinaDAO.consultarPorCurso(aluno.getCurso());
+                    if (disciplinasDoCurso.isEmpty()) {
+                        comboDisciplina.addItem("NENHUMA DISCIPLINA CADASTRADA PARA ESTE CURSO");
+                    } else {
+                        for (String d : disciplinasDoCurso) {
+                            comboDisciplina.addItem(d);
+                        }
+                    }
+                } else {
+                    comboDisciplina.addItem("ALUNO SEM CURSO DEFINIDO");
+                }
+                // --- FIM DA NOVA LÓGICA ---
+                
+                painelLancarNotas.getComboDisciplina().requestFocus();
+                
             } else {
-                lblNomeAlunoNotas.setText(" [ALUNO NÃO ENCONTRADO]");
-                lblCursoAlunoNotas.setText(" [Verifique o RGM]");
+                painelLancarNotas.getLblNomeAlunoNotas().setText(" [ALUNO NÃO ENCONTRADO]");
+                painelLancarNotas.getLblCursoAlunoNotas().setText(" [Verifique o RGM]");
                 this.rgmAlunoAtual = null; 
+                painelLancarNotas.getComboDisciplina().removeAllItems(); // Limpa o combo
                 JOptionPane.showMessageDialog(this, "Aluno com RGM " + rgm + " não encontrado.", "Erro", JOptionPane.ERROR_MESSAGE);
             }
         } catch (Exception e) {
@@ -795,40 +462,47 @@ public class TelaPrincipal extends JFrame {
         }
     }
     
-    /**
-     * Salva uma nova entrada de nota/falta para o aluno carregado.
-     */
     private void salvarNotaFalta() {
-        // (Este método permanece o mesmo)
         if (this.rgmAlunoAtual == null) {
             JOptionPane.showMessageDialog(this, "Nenhum aluno carregado. Busque um aluno pelo RGM primeiro.", "Erro de Validação", JOptionPane.ERROR_MESSAGE);
-            abas.setSelectedComponent(painelNotasFaltas);
-            txtRgmNotas.requestFocus();
+            abas.setSelectedComponent(painelLancarNotas);
+            painelLancarNotas.getTxtRgmNotas().requestFocus();
+            return;
+        }
+        
+        // Validação da disciplina
+        if (painelLancarNotas.getComboDisciplina().getSelectedItem() == null || 
+            painelLancarNotas.getComboDisciplina().getItemCount() == 0 ||
+            ((String)painelLancarNotas.getComboDisciplina().getSelectedItem()).contains("NENHUMA") ||
+            ((String)painelLancarNotas.getComboDisciplina().getSelectedItem()).contains("ALUNO SEM CURSO")) {
+            
+            JOptionPane.showMessageDialog(this, "Nenhuma disciplina válida selecionada.", "Erro de Validação", JOptionPane.ERROR_MESSAGE);
             return;
         }
         
         NotasFaltas nota = new NotasFaltas();
-        nota.setSemestre((String) comboSemestre.getSelectedItem());
-        nota.setDisciplina((String) comboDisciplina.getSelectedItem());
-        nota.setNota((Double) spinnerNota.getValue());
-        nota.setFaltas((Integer) spinnerFaltas.getValue());
+        nota.setSemestre((String) painelLancarNotas.getComboSemestre().getSelectedItem());
+        nota.setDisciplina((String) painelLancarNotas.getComboDisciplina().getSelectedItem());
+        nota.setNota((Double) painelLancarNotas.getSpinnerNota().getValue());
+        nota.setFaltas((Integer) painelLancarNotas.getSpinnerFaltas().getValue());
         nota.setRgmAluno(this.rgmAlunoAtual); 
         
         try {
-            NotasFaltasDAO dao = new NotasFaltasDAO();
-            dao.salvar(nota); 
+            notasFaltasDAO.salvar(nota); 
             JOptionPane.showMessageDialog(this, "Nota/Falta salva com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            
+            painelLancarNotas.getComboSemestre().setSelectedIndex(0);
+            painelLancarNotas.getComboDisciplina().setSelectedIndex(0);
+            painelLancarNotas.getSpinnerNota().setValue(5.0);
+            painelLancarNotas.getSpinnerFaltas().setValue(0);
+            
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Erro ao salvar nota/falta:\n" + e.getMessage(), "Erro de Banco de Dados", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
     }
     
-    /**
-     * Consulta o boletim (pede o RGM).
-     */
     private void consultarBoletim() {
-        // (Este método permanece o mesmo)
         String rgm = JOptionPane.showInputDialog(this, "Digite o RGM do aluno para gerar o boletim:", "Consultar Boletim", JOptionPane.QUESTION_MESSAGE);
 
         if (rgm == null || rgm.trim().isEmpty()) {
@@ -838,19 +512,14 @@ public class TelaPrincipal extends JFrame {
         consultarBoletimPeloRgm(rgm.trim()); 
     }
     
-    /**
-     * Busca os dados e preenche o boletim para um RGM específico.
-     */
     private void consultarBoletimPeloRgm(String rgm) {
-        // (Este método permanece o mesmo)
-        lblBoletimRgm.setText("");
-        lblBoletimNome.setText("");
-        lblBoletimCurso.setText("");
-        tableModel.setRowCount(0); 
+        painelBoletim.getLblBoletimRgm().setText("");
+        painelBoletim.getLblBoletimNome().setText("");
+        painelBoletim.getLblBoletimCurso().setText("");
+        painelBoletim.getTableModel().setRowCount(0); 
         idNotaSelecionada = -1; 
 
         try {
-            AlunoDAO alunoDAO = new AlunoDAO();
             Aluno aluno = alunoDAO.consultar(rgm);
 
             if (aluno == null) {
@@ -858,12 +527,11 @@ public class TelaPrincipal extends JFrame {
                 return;
             }
             
-            lblBoletimRgm.setText(aluno.getRgm());
-            lblBoletimNome.setText(aluno.getNome());
-            lblBoletimCurso.setText(aluno.getCurso());
+            painelBoletim.getLblBoletimRgm().setText(aluno.getRgm());
+            painelBoletim.getLblBoletimNome().setText(aluno.getNome());
+            painelBoletim.getLblBoletimCurso().setText(aluno.getCurso());
             
-            NotasFaltasDAO notasDAO = new NotasFaltasDAO();
-            List<NotasFaltas> listaDeNotas = notasDAO.consultarPorAluno(rgm);
+            List<NotasFaltas> listaDeNotas = notasFaltasDAO.consultarPorAluno(rgm);
             
             if (!listaDeNotas.isEmpty()) {
                 for (NotasFaltas nota : listaDeNotas) {
@@ -874,7 +542,7 @@ public class TelaPrincipal extends JFrame {
                         nota.getNota(),
                         nota.getFaltas()
                     };
-                    tableModel.addRow(linha);
+                    painelBoletim.getTableModel().addRow(linha);
                 }
             }
             
@@ -886,13 +554,10 @@ public class TelaPrincipal extends JFrame {
         }
     }
     
-    /**
-     * Exclui a nota/falta selecionada na tabela do boletim.
-     */
     private void excluirNotaFalta() {
-        // (Este método permanece o mesmo)
         if (abas.getSelectedComponent() != painelBoletim) {
-            JOptionPane.showMessageDialog(this, "Vá para a aba 'Boletim' para selecionar uma nota.", "Ação Inválida", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Consulte o Boletim e selecione uma nota.", "Ação Inválida", JOptionPane.WARNING_MESSAGE);
+            abas.setSelectedComponent(painelBoletim);
             return;
         }
         
@@ -908,13 +573,12 @@ public class TelaPrincipal extends JFrame {
         }
 
         try {
-            NotasFaltasDAO dao = new NotasFaltasDAO();
-            dao.excluir(idNotaSelecionada); 
+            notasFaltasDAO.excluir(idNotaSelecionada); 
             
             JOptionPane.showMessageDialog(this, "Nota/Falta excluída com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             
-            int linhaParaRemover = tabelaNotas.getSelectedRow();
-            tableModel.removeRow(linhaParaRemover);
+            int linhaParaRemover = painelBoletim.getTabelaNotas().getSelectedRow();
+            painelBoletim.getTableModel().removeRow(linhaParaRemover);
             idNotaSelecionada = -1; 
             
         } catch (Exception e) {
@@ -923,20 +587,16 @@ public class TelaPrincipal extends JFrame {
         }
     }
     
-    /**
-     * Altera a nota/falta selecionada com os dados da aba "Notas e Faltas".
-     */
     private void alterarNotaFalta() {
-        // (Este método permanece o mesmo)
         if (idNotaSelecionada == -1) {
             JOptionPane.showMessageDialog(this, "Selecione uma nota na aba 'Boletim' primeiro.", "Ação Inválida", JOptionPane.WARNING_MESSAGE);
             abas.setSelectedComponent(painelBoletim);
             return;
         }
         
-        if (abas.getSelectedComponent() != painelNotasFaltas) {
-             JOptionPane.showMessageDialog(this, "Clique na nota no Boletim para editá-la na aba 'Notas e Faltas'.", "Ação Inválida", JOptionPane.WARNING_MESSAGE);
-             abas.setSelectedComponent(painelBoletim);
+        if (abas.getSelectedComponent() != painelLancarNotas) {
+             JOptionPane.showMessageDialog(this, "Os dados da nota selecionada estão nesta aba, prontos para editar. Clique 'Alterar' novamente para confirmar.", "Ação Inválida", JOptionPane.WARNING_MESSAGE);
+             abas.setSelectedComponent(painelLancarNotas);
             return;
         }
 
@@ -949,18 +609,17 @@ public class TelaPrincipal extends JFrame {
         NotasFaltas nota = new NotasFaltas();
         nota.setId(idNotaSelecionada); 
         
-        nota.setSemestre((String) comboSemestre.getSelectedItem());
-        nota.setDisciplina((String) comboDisciplina.getSelectedItem());
-        nota.setNota((Double) spinnerNota.getValue());
-        nota.setFaltas((Integer) spinnerFaltas.getValue());
+        nota.setSemestre((String) painelLancarNotas.getComboSemestre().getSelectedItem());
+        nota.setDisciplina((String) painelLancarNotas.getComboDisciplina().getSelectedItem());
+        nota.setNota((Double) painelLancarNotas.getSpinnerNota().getValue());
+        nota.setFaltas((Integer) painelLancarNotas.getSpinnerFaltas().getValue());
         
         try {
-            NotasFaltasDAO dao = new NotasFaltasDAO();
-            dao.alterar(nota); 
+            notasFaltasDAO.alterar(nota); 
             
             JOptionPane.showMessageDialog(this, "Nota alterada com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
             
-            String rgm = lblBoletimRgm.getText(); 
+            String rgm = painelBoletim.getLblBoletimRgm().getText(); 
             if (rgm != null && !rgm.isEmpty()) {
                 consultarBoletimPeloRgm(rgm); 
             }
@@ -973,24 +632,385 @@ public class TelaPrincipal extends JFrame {
         }
     }
     
+    private void gerarBoletimPDF() {
+        String rgm = painelBoletim.getLblBoletimRgm().getText();
+        if (rgm == null || rgm.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                "Consulte um boletim primeiro.",
+                "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Salvar PDF como...");
+        fileChooser.setSelectedFile(new File("Boletim_" + rgm + ".pdf"));
+        
+        int userSelection = fileChooser.showSaveDialog(this);
+        
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+            
+            String filePath = fileToSave.getAbsolutePath();
+            if (!filePath.endsWith(".pdf")) {
+                fileToSave = new File(filePath + ".pdf");
+            }
+            
+            try (PDDocument document = new PDDocument()) {
+                PDPage page = new PDPage();
+                document.addPage(page);
+                
+                try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
+                    
+                    PDType1Font fontBold = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
+                    PDType1Font fontRegular = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
+                    
+                    float y = page.getMediaBox().getUpperRightY() - 50; 
+                    float x = 50; 
+                    
+                    contentStream.beginText();
+                    contentStream.setFont(fontBold, 18);
+                    contentStream.newLineAtOffset(x, y);
+                    contentStream.showText("Boletim Escolar");
+                    contentStream.endText();
+                    y -= 30; 
+
+                    contentStream.beginText();
+                    contentStream.setFont(fontRegular, 12);
+                    contentStream.newLineAtOffset(x, y);
+                    contentStream.showText("RGM: " + painelBoletim.getLblBoletimRgm().getText());
+                    y -= 15; 
+                    contentStream.newLineAtOffset(0, -15);
+                    contentStream.showText("Nome: " + painelBoletim.getLblBoletimNome().getText());
+                    y -= 15;
+                    contentStream.newLineAtOffset(0, -15);
+                    contentStream.showText("Curso: " + painelBoletim.getLblBoletimCurso().getText());
+                    contentStream.endText();
+                    y -= 30;
+
+                    contentStream.beginText();
+                    contentStream.setFont(fontBold, 12);
+                    contentStream.newLineAtOffset(x, y);
+                    
+                    float colSemestre = 120;
+                    float colDisciplina = 250;
+                    float colNota = 80;
+                    
+                    contentStream.showText("Semestre");
+                    contentStream.newLineAtOffset(colSemestre, 0);
+                    contentStream.showText("Disciplina");
+                    contentStream.newLineAtOffset(colDisciplina, 0);
+                    contentStream.showText("Nota");
+                    contentStream.newLineAtOffset(colNota, 0);
+                    contentStream.showText("Faltas");
+                    contentStream.endText();
+                    y -= 20;
+
+                    contentStream.setFont(fontRegular, 10);
+                    
+                    DefaultTableModel tableModel = painelBoletim.getTableModel();
+                    for (int i = 0; i < tableModel.getRowCount(); i++) {
+                        String semestre = (String) tableModel.getValueAt(i, 1);
+                        String disciplina = (String) tableModel.getValueAt(i, 2);
+                        String nota = tableModel.getValueAt(i, 3).toString();
+                        String faltas = tableModel.getValueAt(i, 4).toString();
+
+                        contentStream.beginText();
+                        contentStream.newLineAtOffset(x, y);
+                        contentStream.showText(semestre);
+                        contentStream.newLineAtOffset(colSemestre, 0);
+                        contentStream.showText(disciplina);
+                        contentStream.newLineAtOffset(colDisciplina, 0);
+                        contentStream.showText(nota);
+                        contentStream.newLineAtOffset(colNota, 0);
+                        contentStream.showText(faltas);
+                        contentStream.endText();
+                        
+                        y -= 15;
+                    }
+                } 
+                
+                document.save(fileToSave);
+                
+                JOptionPane.showMessageDialog(this,
+                    "PDF salvo com sucesso em:\n" + fileToSave.getAbsolutePath(),
+                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                
+            } catch (IOException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this,
+                    "Erro ao salvar PDF: " + e.getMessage(),
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
     
-    // --- Métodos Auxiliares ---
+    
+    // --- Métodos da Aba "Cadastro Sistema" ---
 
     /**
-     * Coleta os dados das abas 1 e 2 e preenche um objeto Aluno.
+     * (MÉTODO ATUALIZADO)
      */
-    private void coletarDadosAluno(Aluno aluno) throws ParseException {
-        // (Este método permanece o mesmo)
-        aluno.setRgm(txtRgm.getText().trim()); 
-        aluno.setNome(txtNome.getText());
-        aluno.setCpf(txtCpf.getText());
-        aluno.setEmail(txtEmail.getText());
-        aluno.setEndereco(txtEndereco.getText());
-        aluno.setMunicipio(txtMunicipio.getText());
-        aluno.setUf(txtUf.getText());
-        aluno.setCelular(txtCelular.getText());
+    private void carregarComboBoxesEListas() {
+        // Pega os componentes dos painéis
+        JComboBox<String> comboCurso = painelDadosPessoais.getComboCurso();
+        JComboBox<String> comboCampus = painelDadosPessoais.getComboCampus();
+        JComboBox<String> comboDisciplina = painelLancarNotas.getComboDisciplina();
+        DefaultListModel<String> modeloCursos = painelCadastroSistema.getModeloListaCursos();
+        DefaultListModel<String> modeloCampus = painelCadastroSistema.getModeloListaCampus();
+        DefaultListModel<String> modeloDisciplinas = painelCadastroSistema.getModeloListaDisciplinas();
+        JComboBox<String> comboCursoFiltro = painelConsultaAlunos.getComboCursoFiltro();
+        JComboBox<String> comboCampusFiltro = painelConsultaAlunos.getComboCampusFiltro();
+        JComboBox<String> comboDisciplinaFiltro = painelConsultaAlunos.getComboDisciplinaFiltro();
+        JComboBox<String> comboCursoDisciplina = painelCadastroSistema.getComboCursoDisciplina();
+        
+        // Limpa tudo primeiro
+        comboCurso.removeAllItems();
+        comboCampus.removeAllItems();
+        comboDisciplina.removeAllItems();
+        modeloCursos.removeAllElements();
+        modeloCampus.removeAllElements();
+        modeloDisciplinas.removeAllElements();
+        comboCursoFiltro.removeAllItems();
+        comboCampusFiltro.removeAllItems();
+        comboDisciplinaFiltro.removeAllItems();
+        comboCursoDisciplina.removeAllItems();
+        
+        // Adiciona a opção "TODOS" nos filtros
+        comboCursoFiltro.addItem("TODOS");
+        comboCampusFiltro.addItem("TODOS");
+        comboDisciplinaFiltro.addItem("TODOS");
+        
+        // Carrega Cursos
+        List<String> cursos = cursoDAO.consultarTodos();
+        for (String curso : cursos) {
+            comboCurso.addItem(curso);
+            modeloCursos.addElement(curso);
+            comboCursoFiltro.addItem(curso);
+            comboCursoDisciplina.addItem(curso); // <-- Adiciona cursos no novo combo
+        }
+        
+        // Carrega Campus
+        List<String> campusList = campusDAO.consultarTodos();
+        for (String campus : campusList) {
+            comboCampus.addItem(campus);
+            modeloCampus.addElement(campus);
+            comboCampusFiltro.addItem(campus);
+        }
+        
+        // Carrega Disciplinas
+        List<DisciplinaDTO> disciplinas = disciplinaDAO.consultarTodos();
+        modeloDisciplinas.removeAllElements();
+        comboDisciplinaFiltro.removeAllItems(); // Limpa e readiciona
+        comboDisciplinaFiltro.addItem("TODOS");
+        
+        for (DisciplinaDTO dto : disciplinas) {
+            modeloDisciplinas.addElement(dto.nome + "  (" + dto.cursoNome + ")");
+            
+            // Evita duplicatas no filtro de consulta
+            if (((DefaultComboBoxModel<String>)comboDisciplinaFiltro.getModel()).getIndexOf(dto.nome) == -1) {
+                comboDisciplinaFiltro.addItem(dto.nome);
+            }
+        }
+        
+        // O comboDisciplina da Aba 2 (Lançar Notas) NÃO é carregado aqui.
+        // Ele é carregado dinamicamente no método 'buscarAlunoParaNotas()'
+    }
 
-        String dataString = txtDataNasc.getText();
+    /**
+     * (MÉTODO ATUALIZADO)
+     */
+    private void salvarNovoItem(String tipo) {
+        String nome = "";
+        try {
+            if (tipo.equals("curso")) {
+                nome = painelCadastroSistema.getTxtNovoCurso().getText().trim();
+                if (nome.isEmpty()) return;
+                cursoDAO.salvar(nome);
+                painelCadastroSistema.getTxtNovoCurso().setText("");
+            } else if (tipo.equals("campus")) {
+                nome = painelCadastroSistema.getTxtNovoCampus().getText().trim();
+                if (nome.isEmpty()) return;
+                campusDAO.salvar(nome);
+                painelCadastroSistema.getTxtNovoCampus().setText("");
+            } else if (tipo.equals("disciplina")) {
+                String nomeCurso = (String) painelCadastroSistema.getComboCursoDisciplina().getSelectedItem();
+                nome = painelCadastroSistema.getTxtNovaDisciplina().getText().trim();
+                
+                if (nome.isEmpty() || nomeCurso == null) {
+                    JOptionPane.showMessageDialog(this, "Selecione um curso e digite um nome para a disciplina.", "Erro", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                
+                disciplinaDAO.salvar(nome, nomeCurso);
+                painelCadastroSistema.getTxtNovaDisciplina().setText("");
+            }
+            
+            carregarComboBoxesEListas();
+            
+        } catch (SQLException e) {
+            if (e.getMessage().contains("SQLITE_CONSTRAINT_UNIQUE")) {
+                JOptionPane.showMessageDialog(this, "Erro: O item '" + nome + "' já existe.", "Item Duplicado", JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Erro ao salvar: " + e.getMessage(), "Erro de BD", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    /**
+     * (MÉTODO ATUALIZADO)
+     */
+    /**
+     * (MÉTODO ATUALIZADO)
+     * Método genérico para excluir um item selecionado
+     * (COM EXCLUSÃO EM CASCATA DE CURSO -> DISCIPLINAS)
+     */
+    private void excluirItemSelecionado(String tipo) {
+        String itemSelecionado = null;
+        try {
+            if (tipo.equals("curso")) {
+                itemSelecionado = painelCadastroSistema.getListaCursos().getSelectedValue();
+                if (itemSelecionado == null) return;
+                
+                // --- VERIFICAÇÃO 1: Alunos no Curso ---
+                if (alunoDAO.temAlunosParaCurso(itemSelecionado)) {
+                    JOptionPane.showMessageDialog(this,
+                        "Não é possível excluir o curso '" + itemSelecionado + "'.\n" +
+                        "Existem alunos matriculados nele. Altere os alunos primeiro.",
+                        "Erro de Integridade", JOptionPane.ERROR_MESSAGE);
+                    return; 
+                }
+                
+                // --- VERIFICAÇÃO 2: Notas nas Disciplinas (Sua nova regra) ---
+                List<String> disciplinasDoCurso = disciplinaDAO.consultarPorCurso(itemSelecionado);
+                for (String disc : disciplinasDoCurso) {
+                    if (notasFaltasDAO.temNotasParaDisciplina(disc)) {
+                        JOptionPane.showMessageDialog(this,
+                            "Não é possível excluir o curso '" + itemSelecionado + "'.\n" +
+                            "A disciplina '" + disc + "' (deste curso) possui notas lançadas.",
+                            "Erro de Integridade", JOptionPane.ERROR_MESSAGE);
+                        return; // Para a exclusão
+                    }
+                }
+                
+                // --- CONFIRMAÇÃO ---
+                int resposta = JOptionPane.showConfirmDialog(this, 
+                    "Tem certeza que deseja excluir o curso '" + itemSelecionado + "'?\n" +
+                    "ATENÇÃO: Todas as " + disciplinasDoCurso.size() + " disciplinas vinculadas a ele também serão excluídas.",
+                    "Confirmar Exclusão em Cascata",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                
+                if (resposta != JOptionPane.YES_OPTION) {
+                    return;
+                }
+
+                // --- EXECUÇÃO (Exclui disciplinas PRIMEIRO, depois o curso) ---
+                disciplinaDAO.excluirPorCurso(itemSelecionado); // <-- Exclusão em cascata
+                cursoDAO.excluir(itemSelecionado); // <-- Exclusão do curso
+                
+            } else if (tipo.equals("campus")) {
+                itemSelecionado = painelCadastroSistema.getListaCampus().getSelectedValue();
+                if (itemSelecionado == null) return;
+                
+                 if (alunoDAO.temAlunosParaCampus(itemSelecionado)) {
+                    JOptionPane.showMessageDialog(this,
+                        "Não é possível excluir o campus '" + itemSelecionado + "'.\n" +
+                        "Existem alunos matriculados nele. Altere os alunos primeiro.",
+                        "Erro de Integridade", JOptionPane.ERROR_MESSAGE);
+                    return; 
+                }
+                
+                campusDAO.excluir(itemSelecionado);
+                
+            } else if (tipo.equals("disciplina")) {
+                itemSelecionado = painelCadastroSistema.getListaDisciplinas().getSelectedValue();
+                if (itemSelecionado == null) return;
+                
+                String nomeCurso = itemSelecionado.replaceAll(".*\\((.*)\\)$", "$1");
+                String nomeDisciplina = itemSelecionado.replaceAll("  \\(.*\\)$", "");
+
+                if (notasFaltasDAO.temNotasParaDisciplina(nomeDisciplina)) {
+                     JOptionPane.showMessageDialog(this,
+                        "Não é possível excluir a disciplina '" + nomeDisciplina + "'.\n" +
+                        "Existem notas lançadas para ela.",
+                        "Erro de Integridade", JOptionPane.ERROR_MESSAGE);
+                    return; 
+                }
+                
+                // Confirmação para excluir disciplina individual
+                int respDisc = JOptionPane.showConfirmDialog(this,
+                    "Tem certeza que deseja excluir a disciplina '" + nomeDisciplina + "'?",
+                    "Confirmar Exclusão", JOptionPane.YES_NO_OPTION);
+                
+                if (respDisc == JOptionPane.YES_OPTION) {
+                    disciplinaDAO.excluir(nomeDisciplina, nomeCurso);
+                }
+            }
+            
+            // Atualiza todas as listas e combos
+            carregarComboBoxesEListas();
+            
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Erro ao excluir: " + e.getMessage(), "Erro de BD", JOptionPane.ERROR_MESSAGE);
+        }
+    }    
+    /**
+     * Consulta alunos com base nos filtros e preenche a tabela
+     */
+    private void consultarAlunosPorFiltro() {
+        String curso = (String) painelConsultaAlunos.getComboCursoFiltro().getSelectedItem();
+        String campus = (String) painelConsultaAlunos.getComboCampusFiltro().getSelectedItem();
+        String disciplina = (String) painelConsultaAlunos.getComboDisciplinaFiltro().getSelectedItem();
+        
+        if (curso != null && curso.equals("TODOS")) {
+            curso = null;
+        }
+        if (campus != null && campus.equals("TODOS")) {
+            campus = null;
+        }
+        if (disciplina != null && disciplina.equals("TODOS")) {
+            disciplina = null;
+        }
+        
+        DefaultTableModel model = painelConsultaAlunos.getTableModel();
+        model.setRowCount(0);
+
+        try {
+            List<Aluno> alunos = alunoDAO.consultarPorFiltros(curso, campus, disciplina);
+            
+            for (Aluno aluno : alunos) {
+                model.addRow(new Object[]{
+                    aluno.getRgm(),
+                    aluno.getNome(),
+                    aluno.getCurso(),
+                    aluno.getCampus(),
+                    aluno.getPeriodo()
+                });
+            }
+            
+            if (alunos.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Nenhum aluno encontrado com esses filtros.", "Busca Vazia", JOptionPane.INFORMATION_MESSAGE);
+            }
+            
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro ao buscar alunos: " + e.getMessage(), "Erro de BD", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+    }
+
+
+    // --- Métodos Auxiliares ---
+
+    private void coletarDadosAluno(Aluno aluno) throws ParseException {
+        aluno.setRgm(painelDadosPessoais.getTxtRgm().getText().trim()); 
+        aluno.setNome(painelDadosPessoais.getTxtNome().getText());
+        aluno.setCpf(painelDadosPessoais.getTxtCpf().getText());
+        aluno.setEmail(painelDadosPessoais.getTxtEmail().getText());
+        aluno.setEndereco(painelDadosPessoais.getTxtEndereco().getText());
+        aluno.setMunicipio(painelDadosPessoais.getTxtMunicipio().getText());
+        aluno.setUf(painelDadosPessoais.getTxtUf().getText());
+        aluno.setCelular(painelDadosPessoais.getTxtCelular().getText());
+
+        String dataString = painelDadosPessoais.getTxtDataNasc().getText();
         if (dataString == null || dataString.contains("_")) {
             aluno.setDataNascimento(null);
         } else {
@@ -999,72 +1019,86 @@ public class TelaPrincipal extends JFrame {
             java.sql.Date dataSql = new java.sql.Date(dataUtil.getTime());
             aluno.setDataNascimento(dataSql);
         }
+        
+        Object cursoItem = painelDadosPessoais.getComboCurso().getSelectedItem();
+        aluno.setCurso(cursoItem != null ? cursoItem.toString() : null);
 
-        aluno.setCurso((String) comboCurso.getSelectedItem());
-        aluno.setCampus((String) comboCampus.getSelectedItem());
+        Object campusItem = painelDadosPessoais.getComboCampus().getSelectedItem();
+        aluno.setCampus(campusItem != null ? campusItem.toString() : null);
+
         aluno.setPeriodo(getPeriodoSelecionado());
     }
 
-    /**
-     * Preenche os campos da tela com dados de um objeto Aluno.
-     */
     private void preencherCampos(Aluno aluno) {
-        // (Este método permanece o mesmo)
         // Aba 1
-        txtRgm.setText(aluno.getRgm());
-        txtNome.setText(aluno.getNome());
-        txtCpf.setText(aluno.getCpf());
-        txtEmail.setText(aluno.getEmail());
-        txtEndereco.setText(aluno.getEndereco());
-        txtMunicipio.setText(aluno.getMunicipio());
-        txtUf.setText(aluno.getUf());
-        txtCelular.setText(aluno.getCelular());
+        painelDadosPessoais.getTxtRgm().setText(aluno.getRgm());
+        painelDadosPessoais.getTxtNome().setText(aluno.getNome());
+        painelDadosPessoais.getTxtCpf().setText(aluno.getCpf());
+        painelDadosPessoais.getTxtEmail().setText(aluno.getEmail());
+        painelDadosPessoais.getTxtEndereco().setText(aluno.getEndereco());
+        painelDadosPessoais.getTxtMunicipio().setText(aluno.getMunicipio());
+        painelDadosPessoais.getTxtUf().setText(aluno.getUf());
+        painelDadosPessoais.getTxtCelular().setText(aluno.getCelular());
 
         if (aluno.getDataNascimento() != null) {
             SimpleDateFormat formatador = new SimpleDateFormat("dd/MM/yyyy");
             String dataFormatada = formatador.format(aluno.getDataNascimento());
-            txtDataNasc.setText(dataFormatada);
+            painelDadosPessoais.getTxtDataNasc().setText(dataFormatada);
         } else {
-            txtDataNasc.setText(""); 
+            painelDadosPessoais.getTxtDataNasc().setText(""); 
         }
 
-        // Aba 2
-        comboCurso.setSelectedItem(aluno.getCurso());
-        comboCampus.setSelectedItem(aluno.getCampus());
+        // Aba 1 (Curso)
+        painelDadosPessoais.getComboCurso().setSelectedItem(aluno.getCurso());
+        painelDadosPessoais.getComboCampus().setSelectedItem(aluno.getCampus());
         setPeriodoSelecionado(aluno.getPeriodo());
         
-        // Aba 3
-        txtRgmNotas.setText(aluno.getRgm());
-        lblNomeAlunoNotas.setText(aluno.getNome());
-        lblCursoAlunoNotas.setText(aluno.getCurso());
+        // Aba 2 (Lançar Notas)
+        painelLancarNotas.getTxtRgmNotas().setText(aluno.getRgm());
+        painelLancarNotas.getLblNomeAlunoNotas().setText(aluno.getNome());
+        painelLancarNotas.getLblCursoAlunoNotas().setText(aluno.getCurso());
         this.rgmAlunoAtual = aluno.getRgm();
     }
+    
+    private void limparCamposAluno() {
+        // Dados Pessoais
+        painelDadosPessoais.getTxtRgm().setText("");
+        painelDadosPessoais.getTxtNome().setText("");
+        painelDadosPessoais.getTxtDataNasc().setText(""); 
+        painelDadosPessoais.getTxtCpf().setText("");
+        painelDadosPessoais.getTxtEmail().setText("");
+        painelDadosPessoais.getTxtEndereco().setText("");
+        painelDadosPessoais.getTxtMunicipio().setText("");
+        painelDadosPessoais.getTxtUf().setText("");
+        painelDadosPessoais.getTxtCelular().setText("");
+        
+        // Curso
+        painelDadosPessoais.getComboCurso().setSelectedIndex(-1); 
+        painelDadosPessoais.getComboCampus().setSelectedIndex(-1); 
+        painelDadosPessoais.getRadioNoturno().setSelected(true); 
+        
+        painelDadosPessoais.getTxtRgm().requestFocus();
+    }
 
-    /**
-     * Seleciona o JRadioButton com base no texto do período.
-     */
     private void setPeriodoSelecionado(String periodo) {
-        // (Este método permanece o mesmo)
+        ButtonGroup grupoPeriodo = painelDadosPessoais.getGrupoPeriodo();
         if (periodo == null) {
             grupoPeriodo.clearSelection(); 
         } else if (periodo.equals("Matutino")) {
-            radioMatutino.setSelected(true);
+            painelDadosPessoais.getRadioMatutino().setSelected(true);
         } else if (periodo.equals("Vespertino")) {
-            radioVespertino.setSelected(true);
+            painelDadosPessoais.getRadioVespertino().setSelected(true);
         } else if (periodo.equals("Noturno")) {
-            radioNoturno.setSelected(true);
+            painelDadosPessoais.getRadioNoturno().setSelected(true);
         } else {
             grupoPeriodo.clearSelection();
         }
     }
     
-    /**
-     * Método auxiliar para pegar o período (permanece o mesmo)
-     */
     private String getPeriodoSelecionado() {
-        if (radioMatutino.isSelected()) return "Matutino";
-        if (radioVespertino.isSelected()) return "Vespertino";
-        if (radioNoturno.isSelected()) return "Noturno";
+        if (painelDadosPessoais.getRadioMatutino().isSelected()) return "Matutino";
+        if (painelDadosPessoais.getRadioVespertino().isSelected()) return "Vespertino";
+        if (painelDadosPessoais.getRadioNoturno().isSelected()) return "Noturno";
         return null;
     }
     

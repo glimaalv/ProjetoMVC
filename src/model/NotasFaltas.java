@@ -6,7 +6,7 @@ public class NotasFaltas {
     private int id; // Chave primária da tabela
     private String semestre;
     private String disciplina;
-    private double nota; // Usamos double para notas com decimal
+    private double nota; 
     private int faltas;
     
     // Chave estrangeira

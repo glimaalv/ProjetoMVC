@@ -1,6 +1,6 @@
 package model;
 
-// Usamos java.sql.Date para compatibilidade com o BD
+//java.sql.Date para compatibilidade com o BD
 import java.sql.Date; 
 
 public class Aluno {
@@ -8,7 +8,7 @@ public class Aluno {
     // --- Atributos (espelho das colunas da tabela "aluno") ---
     private String rgm;
     private String nome;
-    private Date dataNascimento; // Cuidado aqui, é java.sql.Date
+    private Date dataNascimento;
     private String cpf;
     private String email;
     private String endereco;
@@ -22,7 +22,6 @@ public class Aluno {
     private String periodo;
 
     // --- Getters e Setters ---
-    // (Métodos para acessar e modificar os atributos de forma controlada)
     
     public String getRgm() {
         return rgm;

@@ -79,8 +79,7 @@ public class NotasFaltasDAO {
                 nota.setDisciplina(rs.getString("disciplina"));
                 nota.setNota(rs.getDouble("nota"));
                 
-                // --- LINHA CORRIGIDA ---
-                nota.setFaltas(rs.getInt("faltas")); // <-- Adicione esta linha
+                nota.setFaltas(rs.getInt("faltas")); 
                 
                 nota.setRgmAluno(rs.getString("rgm_aluno"));
                 
@@ -168,6 +167,25 @@ public class NotasFaltasDAO {
                 if (stmt != null) stmt.close();
                 if (conn != null) conn.close();
             } catch (SQLException e) { e.printStackTrace(); }
+        }
+    }
+    
+ // ... (depois do seu método excluir()) ...
+
+    /**
+     * Verifica se alguma nota está registrada para uma disciplina específica.
+     */
+    public boolean temNotasParaDisciplina(String nomeDisciplina) {
+        String sql = "SELECT 1 FROM notas_faltas WHERE disciplina = ? LIMIT 1";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, nomeDisciplina);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next(); // Retorna true se encontrar pelo menos 1
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return true; // Por segurança, não deixa excluir se der erro
         }
     }
 }

@@ -2,20 +2,20 @@ package dao;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet; 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Date; 
-
+import java.util.ArrayList;
+import java.util.List; 
 import model.Aluno; 
 import conexao.ConnectionFactory; 
 
 public class AlunoDAO {
-
+    
     /**
      * (CREATE) - Salvar
      */
-    public void salvar(Aluno aluno) {
-        // (Este método permanece o mesmo)
+    public void salvar(Aluno aluno) throws SQLException {
         String sql = "INSERT INTO aluno (rgm, nome, data_nascimento, cpf, email, " +
                      "endereco, municipio, uf, celular, curso, campus, periodo) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -44,7 +44,8 @@ public class AlunoDAO {
             System.out.println("Aluno salvo com sucesso!");
 
         } catch (SQLException e) {
-            throw new RuntimeException("Erro ao salvar aluno: " + e.getMessage(), e);
+            System.err.println("Erro ao salvar aluno: " + e.getMessage());
+            throw e; // Lança a exceção para a TelaPrincipal tratar
         } finally {
             try {
                 if (stmt != null) stmt.close();
@@ -56,8 +57,7 @@ public class AlunoDAO {
     /**
      * (DELETE) - Excluir
      */
-    public void excluir(String rgm) {
-        // (Este método permanece o mesmo)
+    public void excluir(String rgm) throws SQLException {
         String sql = "DELETE FROM aluno WHERE rgm = ?";
 
         Connection conn = null;
@@ -72,7 +72,8 @@ public class AlunoDAO {
             System.out.println("Aluno excluído com sucesso!");
 
         } catch (SQLException e) {
-            throw new RuntimeException("Erro ao excluir aluno: " + e.getMessage(), e);
+             System.err.println("Erro ao excluir aluno: " + e.getMessage());
+            throw e;
         } finally {
             try {
                 if (stmt != null) stmt.close();
@@ -82,30 +83,21 @@ public class AlunoDAO {
     }
     
     /**
-     * ***** MÉTODO ATUALIZADO *****
-     * Método para ATUALIZAR os dados de um aluno.
-     * (UPDATE)
+     * (UPDATE) - Alterar
      */
-    public void alterar(Aluno aluno) {
-        
-        // Comando SQL de UPDATE
+    public void alterar(Aluno aluno) throws SQLException {
         String sql = "UPDATE aluno SET nome = ?, data_nascimento = ?, cpf = ?, email = ?, " +
                      "endereco = ?, municipio = ?, uf = ?, celular = ?, curso = ?, " +
                      "campus = ?, periodo = ? " +
-                     "WHERE rgm = ?"; // O RGM é a condição (chave)
+                     "WHERE rgm = ?"; 
 
         Connection conn = null;
         PreparedStatement stmt = null;
 
         try {
-            // 1. Conexão
             conn = ConnectionFactory.getConnection();
-            
-            // 2. Preparar SQL
             stmt = conn.prepareStatement(sql);
             
-            // 3. Definir os parâmetros (?)
-            // Note que são 11 campos para atualizar + 1 RGM no final
             stmt.setString(1, aluno.getNome());
             stmt.setDate(2, aluno.getDataNascimento());
             stmt.setString(3, aluno.getCpf());
@@ -117,19 +109,15 @@ public class AlunoDAO {
             stmt.setString(9, aluno.getCurso());
             stmt.setString(10, aluno.getCampus());
             stmt.setString(11, aluno.getPeriodo());
-            
-            // O último ? (número 12) é o RGM
             stmt.setString(12, aluno.getRgm()); 
             
-            // 4. Executar
             stmt.executeUpdate();
-            
             System.out.println("Aluno alterado com sucesso!");
 
         } catch (SQLException e) {
-            throw new RuntimeException("Erro ao alterar aluno: " + e.getMessage(), e);
+            System.err.println("Erro ao alterar aluno: " + e.getMessage());
+            throw e;
         } finally {
-            // 5. Fechar tudo
             try {
                 if (stmt != null) stmt.close();
                 if (conn != null) conn.close();
@@ -138,10 +126,9 @@ public class AlunoDAO {
     }
 
     /**
-     * (READ) - Consultar
+     * (READ) - Consultar por RGM
      */
     public Aluno consultar(String rgm) {
-        // (Este método permanece o mesmo)
         String sql = "SELECT * FROM aluno WHERE rgm = ?";
         
         Connection conn = null;
@@ -172,7 +159,6 @@ public class AlunoDAO {
                 
                 return aluno;
             }
-            
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao consultar aluno: " + e.getMessage(), e);
         } finally {
@@ -184,7 +170,105 @@ public class AlunoDAO {
                 e.printStackTrace();
             }
         }
-        
         return null; 
+    }
+    
+    /**
+     * (READ) - Consulta alunos por filtros (curso, campus, disciplina)
+     */
+    public List<Aluno> consultarPorFiltros(String curso, String campus, String disciplina) {
+        List<Aluno> alunos = new ArrayList<>();
+        
+        String sql = "SELECT * FROM aluno a WHERE 1=1 ";
+        
+        if (curso != null) {
+            sql += " AND a.curso = ?";
+        }
+        if (campus != null) {
+            sql += " AND a.campus = ?";
+        }
+        if (disciplina != null) {
+            sql += " AND EXISTS (SELECT 1 FROM notas_faltas nf " +
+                   "              WHERE nf.rgm_aluno = a.rgm AND nf.disciplina = ?)";
+        }
+        sql += " ORDER BY a.nome";
+
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null; 
+        
+        try {
+            conn = ConnectionFactory.getConnection();
+            stmt = conn.prepareStatement(sql);
+            
+            int paramIndex = 1;
+            if (curso != null) {
+                stmt.setString(paramIndex++, curso);
+            }
+            if (campus != null) {
+                stmt.setString(paramIndex++, campus);
+            }
+            if (disciplina != null) {
+                stmt.setString(paramIndex++, disciplina);
+            }
+            
+            rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                Aluno aluno = new Aluno();
+                aluno.setRgm(rs.getString("rgm"));
+                aluno.setNome(rs.getString("nome"));
+                aluno.setCurso(rs.getString("curso"));
+                aluno.setCampus(rs.getString("campus"));
+                aluno.setPeriodo(rs.getString("periodo"));
+                
+                alunos.add(aluno);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao consultar por filtros: " + e.getMessage(), e);
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (stmt != null) stmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return alunos;
+    }
+    
+    /**
+     * Verifica se algum aluno está matriculado em um curso específico.
+     */
+    public boolean temAlunosParaCurso(String nomeCurso) {
+        String sql = "SELECT 1 FROM aluno WHERE curso = ? LIMIT 1";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, nomeCurso);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next(); // Retorna true se encontrar pelo menos 1
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return true; // Por segurança, não deixa excluir se der erro
+        }
+    }
+
+    /**
+     * Verifica se algum aluno está matriculado em um campus específico.
+     */
+    public boolean temAlunosParaCampus(String nomeCampus) {
+        String sql = "SELECT 1 FROM aluno WHERE campus = ? LIMIT 1";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, nomeCampus);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next(); // Retorna true se encontrar pelo menos 1
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return true; // Por segurança, não deixa excluir se der erro
+        }
     }
 }
